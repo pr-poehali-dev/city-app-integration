@@ -7,9 +7,10 @@ interface ProfileProps {
   setChatMessage: (v: string) => void;
   chatMessages: ChatMsg[];
   onSend: () => void;
+  onLogout: () => void;
 }
 
-export default function ProfileSection({ chatMessage, setChatMessage, chatMessages, onSend }: ProfileProps) {
+export default function ProfileSection({ chatMessage, setChatMessage, chatMessages, onSend, onLogout }: ProfileProps) {
   const [view, setView] = useState<"profile" | "history" | "chat">("profile");
 
   if (view === "history") return (
@@ -121,7 +122,10 @@ export default function ProfileSection({ chatMessage, setChatMessage, chatMessag
         ))}
       </div>
 
-      <button className="w-full glass-card rounded-2xl py-3.5 text-sm text-destructive font-medium flex items-center justify-center gap-2">
+      <button
+        onClick={onLogout}
+        className="w-full glass-card rounded-2xl py-3.5 text-sm text-destructive font-medium flex items-center justify-center gap-2 hover:border-destructive/30 transition-all active:scale-[0.98]"
+      >
         <Icon name="LogOut" size={16} />Выйти из аккаунта
       </button>
     </div>

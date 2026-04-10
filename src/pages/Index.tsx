@@ -7,7 +7,53 @@ import DeliverySection from "@/components/DeliverySection";
 import WalletSection from "@/components/WalletSection";
 import ProfileSection from "@/components/ProfileSection";
 
+function LoginScreen({ onLogin }: { onLogin: () => void }) {
+  const [phone, setPhone] = useState("");
+  return (
+    <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center px-6">
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full opacity-20 blur-3xl" style={{ background: "hsl(263 85% 65%)" }} />
+        <div className="absolute -bottom-32 -right-32 w-96 h-96 rounded-full opacity-20 blur-3xl" style={{ background: "hsl(320 80% 60%)" }} />
+      </div>
+      <div className="w-full max-w-sm relative z-10">
+        <div className="flex flex-col items-center mb-10">
+          <div className="w-16 h-16 rounded-2xl gradient-primary flex items-center justify-center glow-purple mb-4">
+            <span className="text-white font-bold text-2xl" style={{ fontFamily: "Oswald" }}>CG</span>
+          </div>
+          <h1 className="text-3xl font-bold gradient-text" style={{ fontFamily: "Oswald" }}>CityGo</h1>
+          <p className="text-muted-foreground text-sm mt-1">Транспорт, такси и доставка</p>
+        </div>
+        <div className="glass-card rounded-3xl p-6 border border-primary/20">
+          <h2 className="text-lg font-bold mb-1" style={{ fontFamily: "Oswald" }}>Вход в аккаунт</h2>
+          <p className="text-muted-foreground text-xs mb-5">Введите номер телефона</p>
+          <div className="flex items-center gap-2 glass-card rounded-xl px-4 py-3 mb-3 border border-border/50">
+            <span className="text-sm text-muted-foreground">🇷🇺 +7</span>
+            <div className="w-px h-4 bg-border" />
+            <input
+              value={phone}
+              onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+              className="flex-1 bg-transparent text-sm outline-none"
+              placeholder="999 123-45-67"
+            />
+          </div>
+          <button
+            onClick={onLogin}
+            className="w-full gradient-primary text-white py-3.5 rounded-xl font-bold text-base glow-purple transition-all hover:scale-[1.02] active:scale-[0.98]"
+            style={{ fontFamily: "Oswald" }}
+          >
+            Войти
+          </button>
+          <p className="text-center text-xs text-muted-foreground mt-4">
+            Нажимая «Войти», вы соглашаетесь с условиями использования
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Index() {
+  const [isLoggedIn, setIsLoggedIn] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>("map");
   const [taxiFrom, setTaxiFrom] = useState("ул. Ленина, 42");
   const [taxiTo, setTaxiTo] = useState("");
@@ -37,6 +83,8 @@ export default function Index() {
       ]);
     }, 1000);
   }
+
+  if (!isLoggedIn) return <LoginScreen onLogin={() => setIsLoggedIn(true)} />;
 
   return (
     <div className="min-h-screen bg-background text-foreground overflow-hidden">
@@ -81,6 +129,7 @@ export default function Index() {
           <ProfileSection
             chatMessage={chatMessage} setChatMessage={setChatMessage}
             chatMessages={chatMessages} onSend={handleSendMessage}
+            onLogout={() => setIsLoggedIn(false)}
           />
         )}
       </main>
