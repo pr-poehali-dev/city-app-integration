@@ -235,3 +235,25 @@
 .delay-500 {
   animation-delay: 0.5s;
 }
+
+/* Leaflet overrides */
+.leaflet-container {
+  background: #0d1117;
+  font-family: "Golos Text", sans-serif;
+}
+.leaflet-popup-content-wrapper {
+  background: hsl(220 20% 9%);
+  border: 1px solid hsl(220 20% 16%);
+  border-radius: 12px;
+  color: hsl(210 40% 98%);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+.leaflet-popup-tip {
+  background: hsl(220 20% 9%);
+}
+.leaflet-popup-close-button {
+  color: hsl(215 20% 55%) !important;
+}
+.leaflet-control-zoom {
+  display: none;
+}

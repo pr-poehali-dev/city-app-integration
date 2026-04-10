@@ -1,22 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import React from "react";
 import Icon from "@/components/ui/icon";
+import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 
 type Tab = "map" | "taxi" | "delivery" | "profile" | "wallet";
 
-const TRANSPORT_DOTS = [
-  { id: 1, x: 22, y: 35, type: "bus", line: "А12" },
-  { id: 2, x: 55, y: 20, type: "tram", line: "Т3" },
-  { id: 3, x: 70, y: 55, type: "bus", line: "М7" },
-  { id: 4, x: 35, y: 65, type: "metro", line: "М" },
-  { id: 5, x: 80, y: 30, type: "tram", line: "Т1" },
-];
 
-const TAXI_CARS = [
-  { id: 1, x: 30, y: 40 },
-  { id: 2, x: 65, y: 25 },
-  { id: 3, x: 50, y: 70 },
-];
 
 const FOOD_PARTNERS = [
   { id: 1, name: "Burger House", emoji: "🍔", time: "25–35 мин", rating: 4.8 },
@@ -151,22 +142,79 @@ export default function Index() {
   );
 }
 
+/* ── Координаты Поронайска ── */
+const PORONAYSK = { lat: 49.2236, lng: 143.1069 };
+
+const PORONAYSK_TRANSPORT: Array<{ id: number; lat: number; lng: number; type: string; line: string }> = [
+  { id: 1, lat: 49.228, lng: 143.100, type: "bus", line: "А1" },
+  { id: 2, lat: 49.220, lng: 143.112, type: "bus", line: "А3" },
+  { id: 3, lat: 49.215, lng: 143.098, type: "bus", line: "А5" },
+  { id: 4, lat: 49.232, lng: 143.115, type: "taxi", line: "🚖" },
+  { id: 5, lat: 49.218, lng: 143.105, type: "taxi", line: "🚖" },
+];
+
+function makeIcon(color: string, label: string) {
+  return L.divIcon({
+    className: "",
+    html: `<div style="
+      background:${color};
+      color:white;
+      width:34px;height:34px;
+      border-radius:50%;
+      display:flex;align-items:center;justify-content:center;
+      font-size:11px;font-weight:700;
+      box-shadow:0 0 12px ${color}99;
+      border:2px solid rgba(255,255,255,0.3);
+      font-family:'Golos Text',sans-serif;
+    ">${label}</div>`,
+    iconSize: [34, 34],
+    iconAnchor: [17, 17],
+  });
+}
+
+function makeCenterIcon() {
+  return L.divIcon({
+    className: "",
+    html: `<div style="
+      background:linear-gradient(135deg,#9333ea,#ec4899);
+      width:42px;height:42px;
+      border-radius:50%;
+      display:flex;align-items:center;justify-content:center;
+      box-shadow:0 0 24px #9333ea88;
+      border:3px solid rgba(255,255,255,0.4);
+    ">📍</div>`,
+    iconSize: [42, 42],
+    iconAnchor: [21, 42],
+  });
+}
+
+function MapLayer() {
+  const map = useMap();
+  useEffect(() => {
+    map.invalidateSize();
+  }, [map]);
+  return null;
+}
+
 /* ── MAP ── */
 function MapSection() {
   const [filter, setFilter] = useState("all");
   const filters = [
     { id: "all", label: "Всё" },
     { id: "bus", label: "🚌 Автобус" },
-    { id: "tram", label: "🚃 Трамвай" },
-    { id: "metro", label: "🚇 Метро" },
+    { id: "taxi", label: "🚖 Такси" },
   ];
+
+  const visible = PORONAYSK_TRANSPORT.filter(
+    (d) => filter === "all" || d.type === filter
+  );
 
   return (
     <div className="animate-fade-in">
       <div className="px-4 pt-4 pb-2">
         <div className="glass-card rounded-2xl flex items-center gap-3 px-4 py-3 border border-primary/20">
           <Icon name="Search" size={18} className="text-primary" />
-          <input className="flex-1 bg-transparent text-sm placeholder:text-muted-foreground outline-none" placeholder="Куда едем? Найти место..." />
+          <input className="flex-1 bg-transparent text-sm placeholder:text-muted-foreground outline-none" placeholder="Поронайск — найти место..." />
           <Icon name="Mic" size={16} className="text-muted-foreground" />
         </div>
       </div>
@@ -180,48 +228,56 @@ function MapSection() {
         ))}
       </div>
 
-      {/* Map */}
-      <div className="mx-4 rounded-3xl overflow-hidden relative" style={{ height: "52vh" }}>
-        <div className="absolute inset-0 bg-[#0d1117] map-grid">
-          <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-            <line x1="0" y1="50" x2="100" y2="50" stroke="rgba(147,51,234,0.2)" strokeWidth="0.8" />
-            <line x1="50" y1="0" x2="50" y2="100" stroke="rgba(147,51,234,0.2)" strokeWidth="0.8" />
-            <line x1="0" y1="30" x2="100" y2="70" stroke="rgba(59,130,246,0.15)" strokeWidth="0.5" />
-            <line x1="20" y1="0" x2="80" y2="100" stroke="rgba(236,72,153,0.15)" strokeWidth="0.5" />
-            <path d="M 10 20 Q 30 40 50 35 T 90 60" stroke="rgba(147,51,234,0.35)" strokeWidth="1.2" fill="none" />
-            <path d="M 0 60 Q 25 45 50 55 T 100 40" stroke="rgba(6,182,212,0.25)" strokeWidth="0.8" fill="none" />
-          </svg>
+      {/* Leaflet Map */}
+      <div className="mx-4 rounded-3xl overflow-hidden relative z-0" style={{ height: "52vh" }}>
+        <MapContainer
+          center={[PORONAYSK.lat, PORONAYSK.lng]}
+          zoom={14}
+          style={{ height: "100%", width: "100%" }}
+          zoomControl={false}
+          attributionControl={false}
+        >
+          <MapLayer />
+          <TileLayer
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
 
-          {TRANSPORT_DOTS.map((dot) => (
-            <div key={dot.id} className="absolute transform -translate-x-1/2 -translate-y-1/2" style={{ left: `${dot.x}%`, top: `${dot.y}%` }}>
-              <div className="relative">
-                <div className={`absolute inset-0 rounded-full animate-ping-slow opacity-40 ${dot.type === "bus" ? "bg-blue-500" : dot.type === "tram" ? "bg-green-500" : "bg-purple-500"}`} />
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-lg z-10 relative ${dot.type === "bus" ? "bg-blue-500" : dot.type === "tram" ? "bg-green-500" : "bg-purple-600"}`}>
-                  {dot.line}
+          {/* Центральный маркер — Поронайск */}
+          <Marker
+            position={[PORONAYSK.lat, PORONAYSK.lng]}
+            icon={makeCenterIcon()}
+          >
+            <Popup>
+              <div style={{ fontFamily: "Golos Text,sans-serif", fontSize: 13, fontWeight: 600 }}>
+                📍 Поронайск<br />
+                <span style={{ fontWeight: 400, color: "#888" }}>Сахалинская область</span>
+              </div>
+            </Popup>
+          </Marker>
+
+          {/* Транспорт */}
+          {visible.map((dot) => (
+            <Marker
+              key={dot.id}
+              position={[dot.lat, dot.lng]}
+              icon={makeIcon(
+                dot.type === "bus" ? "#3b82f6" : "#facc15",
+                dot.line
+              )}
+            >
+              <Popup>
+                <div style={{ fontFamily: "Golos Text,sans-serif", fontSize: 13 }}>
+                  {dot.type === "bus" ? "🚌 Автобус" : "🚖 Такси"} · маршрут {dot.line}
                 </div>
-              </div>
-            </div>
+              </Popup>
+            </Marker>
           ))}
+        </MapContainer>
 
-          {TAXI_CARS.map((car) => (
-            <div key={car.id} className="absolute transform -translate-x-1/2 -translate-y-1/2" style={{ left: `${car.x}%`, top: `${car.y}%` }}>
-              <div className="w-7 h-7 bg-yellow-400 rounded-lg flex items-center justify-center text-sm shadow-lg">🚖</div>
-            </div>
-          ))}
-
-          <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-full z-20" style={{ transform: "translate(-50%, -100%)" }}>
-            <div className="relative">
-              <div className="absolute -inset-3 rounded-full bg-primary/20 animate-ping-slow" />
-              <div className="w-10 h-10 rounded-full gradient-primary flex items-center justify-center glow-purple shadow-lg">
-                <Icon name="MapPin" size={18} className="text-white" />
-              </div>
-            </div>
-          </div>
-
-          <div className="absolute top-3 left-3 glass-card rounded-xl px-3 py-2">
-            <div className="text-xs text-muted-foreground">Онлайн</div>
-            <div className="text-sm font-bold text-cyan-400">{TRANSPORT_DOTS.length + TAXI_CARS.length} ТС</div>
-          </div>
+        {/* Overlay badge */}
+        <div className="absolute top-3 left-3 glass-card rounded-xl px-3 py-2 z-[1000]">
+          <div className="text-xs text-muted-foreground">Онлайн</div>
+          <div className="text-sm font-bold text-cyan-400">{visible.length} ТС</div>
         </div>
       </div>
 
