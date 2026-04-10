@@ -1,5 +1,4 @@
-import { useState, useEffect } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import { useState, useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import Icon from "@/components/ui/icon";
@@ -49,16 +48,12 @@ function makeCenterIcon() {
   });
 }
 
-function MapLayer() {
-  const map = useMap();
-  useEffect(() => {
-    map.invalidateSize();
-  }, [map]);
-  return null;
-}
-
 export default function MapSection() {
   const [filter, setFilter] = useState("all");
+  const mapRef = useRef<L.Map | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const markersRef = useRef<L.Marker[]>([]);
+
   const filters = [
     { id: "all", label: "Всё" },
     { id: "bus", label: "🚌 Автобус" },
@@ -68,6 +63,56 @@ export default function MapSection() {
   const visible = PORONAYSK_TRANSPORT.filter(
     (d) => filter === "all" || d.type === filter
   );
+
+  // Init map once
+  useEffect(() => {
+    if (!containerRef.current || mapRef.current) return;
+
+    const map = L.map(containerRef.current, {
+      center: [PORONAYSK.lat, PORONAYSK.lng],
+      zoom: 14,
+      zoomControl: false,
+      attributionControl: false,
+    });
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+
+    // Center marker
+    L.marker([PORONAYSK.lat, PORONAYSK.lng], { icon: makeCenterIcon() })
+      .addTo(map)
+      .bindPopup(`<div style="font-family:'Golos Text',sans-serif;font-size:13px;font-weight:600">
+        📍 Поронайск<br/><span style="font-weight:400;color:#888">Сахалинская область</span>
+      </div>`);
+
+    mapRef.current = map;
+
+    return () => {
+      map.remove();
+      mapRef.current = null;
+    };
+  }, []);
+
+  // Update transport markers on filter change
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    // Remove old markers
+    markersRef.current.forEach((m) => m.remove());
+    markersRef.current = [];
+
+    // Add new
+    visible.forEach((dot) => {
+      const marker = L.marker([dot.lat, dot.lng], {
+        icon: makeIcon(dot.type === "bus" ? "#3b82f6" : "#facc15", dot.line),
+      })
+        .addTo(map)
+        .bindPopup(`<div style="font-family:'Golos Text',sans-serif;font-size:13px">
+          ${dot.type === "bus" ? "🚌 Автобус" : "🚖 Такси"} · маршрут ${dot.line}
+        </div>`);
+      markersRef.current.push(marker);
+    });
+  }, [filter]);
 
   return (
     <div className="animate-fade-in">
@@ -90,49 +135,7 @@ export default function MapSection() {
 
       {/* Leaflet Map */}
       <div className="mx-4 rounded-3xl overflow-hidden relative z-0" style={{ height: "52vh" }}>
-        <MapContainer
-          center={[PORONAYSK.lat, PORONAYSK.lng]}
-          zoom={14}
-          style={{ height: "100%", width: "100%" }}
-          zoomControl={false}
-          attributionControl={false}
-        >
-          <MapLayer />
-          <TileLayer
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
-
-          {/* Центральный маркер — Поронайск */}
-          <Marker
-            position={[PORONAYSK.lat, PORONAYSK.lng]}
-            icon={makeCenterIcon()}
-          >
-            <Popup>
-              <div style={{ fontFamily: "Golos Text,sans-serif", fontSize: 13, fontWeight: 600 }}>
-                📍 Поронайск<br />
-                <span style={{ fontWeight: 400, color: "#888" }}>Сахалинская область</span>
-              </div>
-            </Popup>
-          </Marker>
-
-          {/* Транспорт */}
-          {visible.map((dot) => (
-            <Marker
-              key={dot.id}
-              position={[dot.lat, dot.lng]}
-              icon={makeIcon(
-                dot.type === "bus" ? "#3b82f6" : "#facc15",
-                dot.line
-              )}
-            >
-              <Popup>
-                <div style={{ fontFamily: "Golos Text,sans-serif", fontSize: 13 }}>
-                  {dot.type === "bus" ? "🚌 Автобус" : "🚖 Такси"} · маршрут {dot.line}
-                </div>
-              </Popup>
-            </Marker>
-          ))}
-        </MapContainer>
+        <div ref={containerRef} style={{ height: "100%", width: "100%" }} />
 
         {/* Overlay badge */}
         <div className="absolute top-3 left-3 glass-card rounded-xl px-3 py-2 z-[1000]">
